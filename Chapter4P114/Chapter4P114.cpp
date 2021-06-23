@@ -4,6 +4,7 @@
 #include <DirectXMath.h>
 #include<d3d12.h>
 #include<dxgi1_6.h>
+#include <d3dcompiler.h>
 #include<vector>
 #ifdef _DEBUG
 #include<iostream>
@@ -11,6 +12,7 @@
 
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
+#pragma comment(lib, "d3dcompiler.lib")
 
 using namespace std;
 using namespace DirectX;
@@ -294,6 +296,62 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファーの仮想アドレス
 	vbView.SizeInBytes = sizeof(vertices);      // 全バイト数
 	vbView.StrideInBytes = sizeof(vertices[0]); // 1頂点あたりのバイト数
+
+	//　Shader用のBlobを用意
+	ID3DBlob* _vsBlob = nullptr;	//　頂点シェーダー
+	ID3DBlob* _psBlob = nullptr;	// ピクセルシェーダー
+	ID3DBlob* errorBlob = nullptr;	//　エラー格納用
+	//　頂点シェーダーをコンパイルする
+	result = D3DCompileFromFile(
+		L"BasicVertexShader.hlsl",
+		nullptr,
+		D3D_COMPILE_STANDARD_FILE_INCLUDE,
+		"BasicVS",
+		"vs_5_0",
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		0, &_vsBlob, &errorBlob);
+	if (SUCCEEDED(result))
+	{	//　頂点シェーダーのコンパイル成功、ピクセルシェーダーのコンパイル
+		result = D3DCompileFromFile(
+			L"BasicPixelShader.hlsl",
+			nullptr,
+			D3D_COMPILE_STANDARD_FILE_INCLUDE,
+			"BasicPS",
+			"ps_5_0",
+			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+			0, &_psBlob, &errorBlob);
+		if (FAILED(result)) {// コンパイルエラーの場合
+			if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+				::OutputDebugStringA("シェーダーファイルが見当たりません");
+			}
+			else {
+				std::string errstr;
+				errstr.resize(errorBlob->GetBufferSize());
+				std::copy_n((char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize(), errstr.begin());
+				errstr += "\n";
+				OutputDebugStringA(errstr.c_str());
+			}
+			exit(1);
+		}
+	}
+	else {
+		if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+			::OutputDebugStringA("シェーダーファイルが見当たりません");
+		}
+		else {
+			std::string errstr;
+			errstr.resize(errorBlob->GetBufferSize());
+			std::copy_n((char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize(), errstr.begin());
+			errstr += "\n";
+			OutputDebugStringA(errstr.c_str());
+		}
+		exit(1);
+	}
+
+
+
+
+
 
 
 	MSG msg = {};
