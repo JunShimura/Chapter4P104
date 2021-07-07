@@ -347,6 +347,44 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		exit(1);
 	}
+	// 頂点レイアウト
+	D3D12_INPUT_ELEMENT_DESC inputLayout[] = 
+	{
+		{
+			"POSITION",
+			0,
+			DXGI_FORMAT_R32G32B32_FLOAT,
+			0,
+			D3D12_APPEND_ALIGNED_ELEMENT,
+			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		},
+	};
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
+	gpipeline.pRootSignature = nullptr;
+	gpipeline.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
+	gpipeline.VS.BytecodeLength = _vsBlob->GetBufferSize(); 
+	gpipeline.PS.pShaderBytecode = _psBlob->GetBufferPointer(); 
+	gpipeline.PS.BytecodeLength = _psBlob->GetBufferSize();
+	// gpipeline.StreamOutput.NumEntriesについては未指定
+
+	//  デフォルトのサンプルマスクを表す定数（0xffffffff）
+	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+
+	gpipeline.BlendState.AlphaToCoverageEnable = false;
+	gpipeline.BlendState.IndependentBlendEnable = false;
+
+	D3D12_RENDER_TARGET_BLEND_DESC renderTargetBlendDesc = {};
+
+	//ひとまず加算や乗算やαブレンディングは使用しない
+	renderTargetBlendDesc.BlendEnable = false;
+	renderTargetBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	//ひとまず論理演算は使用しない
+	renderTargetBlendDesc.LogicOpEnable = false;
+
+	gpipeline.BlendState.RenderTarget[0] = renderTargetBlendDesc;
+
 
 	MSG msg = {};
 	while (true) {
