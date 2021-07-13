@@ -368,8 +368,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	gpipeline.PS.BytecodeLength = _psBlob->GetBufferSize();
 	// gpipeline.StreamOutput.NumEntriesについては未指定
 
-	//  デフォルトのサンプルマスクを表す定数（0xffffffff）
-	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+//  デフォルトのサンプルマスクを表す定数（0xffffffff）
+	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK; 
+	//  まだアンチエイリアスは使わないためfalse 
+	gpipeline.RasterizerState.MultisampleEnable = false; 
+	gpipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;  //  カリングしない
+	gpipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID; //  中身を塗りつぶす
+	gpipeline.RasterizerState.DepthClipEnable = true; //  深度方向のクリッピングは有効に
 
 	gpipeline.BlendState.AlphaToCoverageEnable = false;
 	gpipeline.BlendState.IndependentBlendEnable = false;
