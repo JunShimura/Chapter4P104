@@ -370,11 +370,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 //  デフォルトのサンプルマスクを表す定数（0xffffffff）
 	gpipeline.SampleMask = D3D12_DEFAULT_SAMPLE_MASK; 
-	//  まだアンチエイリアスは使わないためfalse 
-	gpipeline.RasterizerState.MultisampleEnable = false; 
-	gpipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;  //  カリングしない
-	gpipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID; //  中身を塗りつぶす
-	gpipeline.RasterizerState.DepthClipEnable = true; //  深度方向のクリッピングは有効に
 
 	gpipeline.BlendState.AlphaToCoverageEnable = false;
 	gpipeline.BlendState.IndependentBlendEnable = false;
@@ -389,6 +384,29 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	renderTargetBlendDesc.LogicOpEnable = false;
 
 	gpipeline.BlendState.RenderTarget[0] = renderTargetBlendDesc;
+
+	// D3D12_RASTERIZER_DESC の設定
+	gpipeline.RasterizerState.MultisampleEnable = false;//まだアンチェリは使わない
+	gpipeline.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;//カリングしない
+	gpipeline.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;//中身を塗りつぶす
+	gpipeline.RasterizerState.DepthClipEnable = true;//深度方向のクリッピングは有効に
+
+	gpipeline.RasterizerState.FrontCounterClockwise = false;
+	gpipeline.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+	gpipeline.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+	gpipeline.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+	gpipeline.RasterizerState.AntialiasedLineEnable = false;
+	gpipeline.RasterizerState.ForcedSampleCount = 0;
+	gpipeline.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	// D3D12_DEPTH_STENCIL_DESC　深度ステンシル   
+	gpipeline.DepthStencilState.DepthEnable = false;
+	gpipeline.DepthStencilState.StencilEnable = false;
+
+	// 予め用意した頂点レイアウトを設定
+	gpipeline.InputLayout.pInputElementDescs = inputLayout;//レイアウト先頭アドレス
+	gpipeline.InputLayout.NumElements = _countof(inputLayout);//レイアウト配列数
+
 
 
 	MSG msg = {};
