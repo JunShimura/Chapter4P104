@@ -360,6 +360,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			0
 		},
 	};
+
+	// パイプラインステートの設定
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC gpipeline = {};
 	gpipeline.pRootSignature = nullptr;
 	gpipeline.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
@@ -406,6 +408,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// 予め用意した頂点レイアウトを設定
 	gpipeline.InputLayout.pInputElementDescs = inputLayout;//レイアウト先頭アドレス
 	gpipeline.InputLayout.NumElements = _countof(inputLayout);//レイアウト配列数
+
+	gpipeline.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED; //  カットなし
+
+	//  三角形で構成
+	gpipeline.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	
+	//　レンダーターゲットの設定
+	gpipeline.NumRenderTargets = 1; // 今は1つのみ
+	gpipeline.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM; // 0～1に正規化されたRGBA
+
+	gpipeline.SampleDesc.Count = 1;   // サンプリングは1ピクセルにつき1
+	gpipeline.SampleDesc.Quality = 0; // クオリティは最低
+
+	ID3D12PipelineState* _pipelinestate = nullptr;
+	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
+	if (result != S_OK) {
+		DebugOutputFormatString("FAILED ID3D12Device::CreateGraphicsPipelineState method");
+		return -1;
+	}
 
 
 
