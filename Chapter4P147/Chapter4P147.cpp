@@ -253,6 +253,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{0.4f,-0.7f,0.0f} ,//右下
 		{0.4f,0.7f,0.0f} ,//右上
 	};
+	unsigned short indices[]
+		= {
+				0, 1, 2,
+				2, 1, 3
+		};
+
+
 	//XMFLOAT3 vertices[] = {
 	//	//　左下の三角形
 	//	{-0.4f,-0.7f,0.0f} ,	//左下
@@ -308,6 +315,26 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファーの仮想アドレス
 	vbView.SizeInBytes = sizeof(vertices);      // 全バイト数
 	vbView.StrideInBytes = sizeof(vertices[0]); // 1頂点あたりのバイト数
+
+	/// 頂点インデックスの用意
+	ID3D12Resource* idxBuff = nullptr;
+	//設定は、バッファのサイズ以外頂点バッファの設定を使いまわして
+	//OKだと思います。
+	resdesc.Width = sizeof(indices);
+	result = _dev->CreateCommittedResource(
+		&heapprop,
+		D3D12_HEAP_FLAG_NONE,
+		&resdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&idxBuff));
+	if (result != S_OK) {
+		DebugOutputFormatString("FAILED ID3D12Device::CreateCommittedResource");
+		return -1;
+	}
+
+
+
 
 	//　Shader用のBlobを用意
 	ID3DBlob* _vsBlob = nullptr;	//　頂点シェーダー
