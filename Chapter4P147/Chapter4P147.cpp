@@ -301,6 +301,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("FAILED ID3D12Device::CreateCommittedResource");
 		return -1;
 	}
+
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	if (result != S_OK) {
@@ -320,7 +321,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12Resource* idxBuff = nullptr;
 	//設定は、バッファのサイズ以外頂点バッファの設定を使いまわして
 	//OKだと思います。
-	resdesc.Width = sizeof(indices);
+	resdesc.Width = sizeof(indices);	//　バッファサイズのみ変更して使いまわし
 	result = _dev->CreateCommittedResource(
 		&heapprop,
 		D3D12_HEAP_FLAG_NONE,
@@ -328,13 +329,22 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(&idxBuff));
+	
 	if (result != S_OK) {
 		DebugOutputFormatString("FAILED ID3D12Device::CreateCommittedResource");
 		return -1;
 	}
+	//作ったバッファにインデックスデータをコピー
+	unsigned short* mappedIdx = nullptr;
+	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
+	std::copy(std::begin(indices), std::end(indices), mappedIdx);
+	idxBuff->Unmap(0, nullptr);
 
-
-
+	//インデックスバッファビューを作成
+	D3D12_INDEX_BUFFER_VIEW ibView = {};
+	ibView.BufferLocation = idxBuff->GetGPUVirtualAddress();
+	ibView.Format = DXGI_FORMAT_R16_UINT;
+	ibView.SizeInBytes = sizeof(indices);
 
 	//　Shader用のBlobを用意
 	ID3DBlob* _vsBlob = nullptr;	//　頂点シェーダー
@@ -552,13 +562,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->RSSetScissorRects(1, &scissorrect);
 		_cmdList->SetGraphicsRootSignature(rootsignature);
 		// トポロジ
-		//_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		// 頂点
 		_cmdList->IASetVertexBuffers(0, 1, &vbView);
+		// 頂点インデックス
+		_cmdList->IASetIndexBuffer(&ibView);
 		//　頂点を描画
-		_cmdList->DrawInstanced(4, 1, 0, 0);	//四角形
-
+		_cmdList->DrawIndexedInstanced(sizeof(indices) / sizeof(indices[0]), 1, 0, 0, 0);
+		//_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);

@@ -8,6 +8,10 @@
 #include<vector>
 #ifdef _DEBUG
 #include<iostream>
+#include <iomanip>
+#include <cmath>
+#define _USE_MATH_DEFINES
+#include<math.h>
 #endif
 
 #pragma comment(lib,"d3d12.lib")
@@ -248,10 +252,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 座標の定義
 	XMFLOAT3 vertices[] = {
-	{-0.5f, -0.7f, 0.0f} , //  左下
-		{ 0.0f,  0.7f, 0.0f} , //  左上 
-		{ 0.5f, -0.7f, 0.0f} , //  右下
+		{-0.4f,-0.7f,0.0f} ,	//[0]左下
+		{-0.4f,0.7f,0.0f} ,	//[1]左上
+		{0.4f,-0.7f,0.0f} ,	//[2]右下
+		{0.4f,0.7f,0.0f} ,	//[3]右上
+		{0.0f,0.8f,0.0f},		//[4]中央の上
 	};
+	unsigned short indices[]
+		= {
+				0, 1, 4,	//左の三角形
+				0, 4, 2,	//真ん中の三角形
+				2,	4,	3,	//左の三角形
+	};
+
+
+	//XMFLOAT3 vertices[] = {
+	//	//　左下の三角形
+	//	{-0.4f,-0.7f,0.0f} ,	//左下
+	//	{-0.4f,0.7f,0.0f} ,	//左上
+	//	{0.4f,-0.7f,0.0f} ,	//右下
+	//	//　右上の三角形
+	//	{-0.4f,0.7f,0.0f} ,	//左上
+	//	{0.4f,0.7f,0.0f} ,	//右上
+	//	{0.4f,-0.7f,0.0f}		//右下
+	//};
+
 
 
 	D3D12_HEAP_PROPERTIES heapprop = {};
@@ -282,6 +307,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		DebugOutputFormatString("FAILED ID3D12Device::CreateCommittedResource");
 		return -1;
 	}
+
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 	if (result != S_OK) {
@@ -296,6 +322,35 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vbView.BufferLocation = vertBuff->GetGPUVirtualAddress(); // バッファーの仮想アドレス
 	vbView.SizeInBytes = sizeof(vertices);      // 全バイト数
 	vbView.StrideInBytes = sizeof(vertices[0]); // 1頂点あたりのバイト数
+
+	/// 頂点インデックスの用意
+	ID3D12Resource* idxBuff = nullptr;
+	//設定は、バッファのサイズ以外頂点バッファの設定を使いまわして
+	//OKだと思います。
+	resdesc.Width = sizeof(indices);	//　バッファサイズのみ変更して使いまわし
+	result = _dev->CreateCommittedResource(
+		&heapprop,
+		D3D12_HEAP_FLAG_NONE,
+		&resdesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&idxBuff));
+
+	if (result != S_OK) {
+		DebugOutputFormatString("FAILED ID3D12Device::CreateCommittedResource");
+		return -1;
+	}
+	//作ったバッファにインデックスデータをコピー
+	unsigned short* mappedIdx = nullptr;
+	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
+	std::copy(std::begin(indices), std::end(indices), mappedIdx);
+	idxBuff->Unmap(0, nullptr);
+
+	//インデックスバッファビューを作成
+	D3D12_INDEX_BUFFER_VIEW ibView = {};
+	ibView.BufferLocation = idxBuff->GetGPUVirtualAddress();
+	ibView.Format = DXGI_FORMAT_R16_UINT;
+	ibView.SizeInBytes = sizeof(indices);
 
 	//　Shader用のBlobを用意
 	ID3DBlob* _vsBlob = nullptr;	//　頂点シェーダー
@@ -472,12 +527,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorrect.right = scissorrect.left + window_width;  //  切り抜き右座標
 	scissorrect.bottom = scissorrect.top + window_height; //  切り抜き下座標
 
-	UINT frameCount = 0;
+	// 毎フレーム更新する変数
+	unsigned int  frame = 0;
 
 	MSG msg = {};
 	while (true) {
-		frameCount++;
-
 		if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
@@ -486,6 +540,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{
 			break;
 		}
+
+		frame++;
 
 		/////////////
 		// DirextXでのフレーム描画
@@ -509,8 +565,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->OMSetRenderTargets(1, &rtvH, true, nullptr);
 
 		//画面クリア
-		//float clearColor[] = { 0.125f,0.125f,0.125f,1.0f };//12.5%グレー
-		float clearColor[] = { (float)(frameCount % 100) / 100.0f,0.125f,0.125f,1.0f };//12.5%グレー
+		float clearColor[] = { 0.125f,0.125f,0.125f,1.0f };//12.5%グレー
+		clearColor[0] = (sin( (float)frame / 60* M_PI) * sin((float)frame / 100) + 1) / 2.0f;
+		clearColor[1] = (sin((float)frame / 70) * sin((float)frame / 500) + 1) / 2.0f;
+		clearColor[2] = (sin((float)frame / 20) * sin((float)frame / 300) + 1) / 2.0f;
 		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
 
 		// ビューポート、シザー、ルートシグネチャの設定
@@ -519,12 +577,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->SetGraphicsRootSignature(rootsignature);
 		// トポロジ
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		// 頂点
 		_cmdList->IASetVertexBuffers(0, 1, &vbView);
+		// 頂点インデックス
+		_cmdList->IASetIndexBuffer(&ibView);
 		//　頂点を描画
-		_cmdList->DrawInstanced(3, 1, 0, 0);
-
-
+		_cmdList->DrawIndexedInstanced(sizeof(indices) / sizeof(indices[0]), 1, 0, 0, 0);
+		//_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
