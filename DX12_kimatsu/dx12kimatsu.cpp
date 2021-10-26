@@ -253,11 +253,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ç¿ïWÇÃíËã`
 	const int nPolygons = 3;
-	const int nVertices = 7;
+	const int nVertices = 5;
 	float screenRatio = (float)window_height / window_width;
 	XMFLOAT3 vertices[nVertices * nPolygons];
-	XMFLOAT3 polygonCenter[nPolygons] = { { -0.5,0,0 },{0,0,0}, {0.75,0,0} };
-	float polygonRadius[nPolygons] = { 0.125,0.25,0.5 };
+	XMFLOAT3 polygonCenter[nPolygons] = { { -0.75,0,0 },{0,0,0}, {0.75,0,0} };
+	float polygonRadius[nPolygons] = { 0.5,0.5,0.5 };
 
 	for (int i = 0; i < nPolygons; i++) {
 		for (int j = 0; j < nVertices; j++) {
@@ -272,8 +272,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		int baseVert = i * nVertices;
 		int offset = i * (nVertices - 2) * 3;
 		for (int j = 0; j < (nVertices - 2); j++) {
-			indices[j * 3+offset] = baseVert;
-			indices[j * 3 + 1 + offset] = j + 1+baseVert;
+			indices[j * 3 + offset] = baseVert;
+			indices[j * 3 + 1 + offset] = j + 1 + baseVert;
 			indices[j * 3 + 2 + offset] = j + 2 + baseVert;
 		}
 	}
