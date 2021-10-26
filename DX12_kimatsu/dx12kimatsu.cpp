@@ -12,6 +12,7 @@
 #include <cmath>
 #define _USE_MATH_DEFINES
 #include<math.h>
+#include <array>
 #endif
 
 #pragma comment(lib,"d3d12.lib")
@@ -251,19 +252,59 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ShowWindow(hwnd, SW_SHOW);
 
 	// 座標の定義
-	XMFLOAT3 vertices[] = {
-		{-0.4f,-0.7f,0.0f} ,	//[0]左下
-		{-0.4f,0.7f,0.0f} ,	//[1]左上
-		{0.4f,-0.7f,0.0f} ,	//[2]右下
-		{0.4f,0.7f,0.0f} ,	//[3]右上
-		{0.0f,0.8f,0.0f},		//[4]中央の上
-	};
-	unsigned short indices[]
-		= {
-				0, 1, 4,	//左の三角形
-				0, 4, 2,	//真ん中の三角形
-				2,	4,	3,	//左の三角形
-	};
+	const int nPolygons = 3;
+	const int nVertices = 7;
+	float screenRatio = (float)window_height / window_width;
+	XMFLOAT3 vertices[nVertices * nPolygons];
+	XMFLOAT3 polygonCenter[nPolygons] = { { -0.5,0,0 },{0,0,0}, {0.75,0,0} };
+	float polygonRadius[nPolygons] = { 0.125,0.25,0.5 };
+
+	for (int i = 0; i < nPolygons; i++) {
+		for (int j = 0; j < nVertices; j++) {
+			vertices[i * nVertices + j].x = (polygonCenter[i].x - polygonRadius[i] * sin((double)j / nVertices * 2 * M_PI)) * screenRatio;	//＝ｘcosθ-ｙsinθ
+			vertices[i * nVertices + j].y = polygonCenter[i].y + polygonRadius[i] * cos((double)j / nVertices * 2 * M_PI);	//＝ｘsinθ+ｙcosθ
+			vertices[i * nVertices + j].z = 0;
+		}
+	}
+	int indicesSize = ((nVertices - 2) * 3) * nPolygons;
+	unsigned short indices[((nVertices - 2) * 3) * nPolygons];
+	for (int i = 0; i < nPolygons; i++) {
+		int baseVert = i * nVertices;
+		int offset = i * (nVertices - 2) * 3;
+		for (int j = 0; j < (nVertices - 2); j++) {
+			indices[j * 3+offset] = baseVert;
+			indices[j * 3 + 1 + offset] = j + 1+baseVert;
+			indices[j * 3 + 2 + offset] = j + 2 + baseVert;
+		}
+	}
+
+	//unsigned short indices[]
+	//	= {
+	//			0, 1, 2,	//#0 [ 0][ 1][ 2]
+	//			0, 2, 3,	//#1 [ 3][ 4][ 5]
+	//			4,	5,	6,	//#2 [ 6][ 7][ 8]
+	//			4,	6,	7,	//#3 [ 9][10][11]
+	//};
+	//unsigned short indices[(nVertices - 2) * 3];
+	//for (int i = 0; i < sizeof(indices) / sizeof(indices[0]); i+=3) {
+	//	indices[i] = 0;
+	//}
+
+
+
+	//XMFLOAT3 vertices[] = {
+	//	{-0.4f,-0.7f,0.0f} ,	//[0]左下
+	//	{-0.4f,0.7f,0.0f} ,	//[1]左上
+	//	{0.4f,-0.7f,0.0f} ,	//[2]右下
+	//	{0.4f,0.7f,0.0f} ,	//[3]右上
+	//	{0.0f,0.8f,0.0f},		//[4]中央の上
+	//};
+	//unsigned short indices[]
+	//	= {
+	//			0, 1, 4,	//左の三角形
+	//			0, 4, 2,	//真ん中の三角形
+	//			2,	4,	3,	//左の三角形
+	//};
 
 
 	//XMFLOAT3 vertices[] = {
@@ -566,7 +607,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//画面クリア
 		float clearColor[] = { 0.125f,0.125f,0.125f,1.0f };//12.5%グレー
-		clearColor[0] = (sin( (float)frame / 60* M_PI) * sin((float)frame / 100) + 1) / 2.0f;
+		clearColor[0] = (sin((float)frame / 60 * M_PI) * sin((float)frame / 100) + 1) / 2.0f;
 		clearColor[1] = (sin((float)frame / 70) * sin((float)frame / 500) + 1) / 2.0f;
 		clearColor[2] = (sin((float)frame / 20) * sin((float)frame / 300) + 1) / 2.0f;
 		_cmdList->ClearRenderTargetView(rtvH, clearColor, 0, nullptr);
