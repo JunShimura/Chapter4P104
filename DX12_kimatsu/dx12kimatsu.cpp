@@ -253,11 +253,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 座標の定義
 	const int nPolygons = 3;
-	const int nVertices = 5;
+	const int nVertices = 16;
 	float screenRatio = (float)window_height / window_width;
 	XMFLOAT3 vertices[nVertices * nPolygons];
-	XMFLOAT3 polygonCenter[nPolygons] = { { -0.75,0,0 },{0,0,0}, {0.75,0,0} };
-	float polygonRadius[nPolygons] = { 0.5,0.5,0.5 };
+	XMFLOAT3 vertices2[nVertices * nPolygons];
+	XMFLOAT3 polygonCenter[nPolygons] = { { -0.5,0.5,0 },{0,0,0}, {0.5,-0.5,0} };
+	float polygonRadius[nPolygons] = { 0.25,0.5,0.25 };
 
 	for (int i = 0; i < nPolygons; i++) {
 		for (int j = 0; j < nVertices; j++) {
@@ -382,10 +383,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return -1;
 	}
 	//作ったバッファにインデックスデータをコピー
+	/*
 	unsigned short* mappedIdx = nullptr;
 	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
 	std::copy(std::begin(indices), std::end(indices), mappedIdx);
 	idxBuff->Unmap(0, nullptr);
+	*/
 
 	//インデックスバッファビューを作成
 	D3D12_INDEX_BUFFER_VIEW ibView = {};
@@ -395,7 +398,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//　Shader用のBlobを用意
 	ID3DBlob* _vsBlob = nullptr;	//　頂点シェーダー
-	ID3DBlob* _psBlob = nullptr;	// ピクセルシェーダー
+	ID3DBlob* _psBlob0 = nullptr;	// ピクセルシェーダー
+	ID3DBlob* _psBlob1 = nullptr;	// ピクセルシェーダー
 	ID3DBlob* errorBlob = nullptr;	//　エラー格納用
 	//　頂点シェーダーをコンパイルする
 	result = D3DCompileFromFile(
@@ -407,15 +411,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0, &_vsBlob, &errorBlob);
 	if (SUCCEEDED(result))
-	{	//　頂点シェーダーのコンパイル成功、ピクセルシェーダーのコンパイル
+	{	//　頂点シェーダーのコンパイル成功、ピクセルシェーダー0のコンパイル
 		result = D3DCompileFromFile(
-			L"BasicPixelShader.hlsl",
+			L"RedPixelShader.hlsl",
 			nullptr,
 			D3D_COMPILE_STANDARD_FILE_INCLUDE,
 			"BasicPS",
 			"ps_5_0",
 			D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
-			0, &_psBlob, &errorBlob);
+			0, &_psBlob0, &errorBlob);
 		if (FAILED(result)) {// コンパイルエラーの場合
 			if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
 				::OutputDebugStringA("シェーダーファイルが見当たりません");
@@ -429,8 +433,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 			exit(1);
 		}
+		else {	//　頂点シェーダーのコンパイル成功、ピクセルシェーダー1のコンパイル
+			result = D3DCompileFromFile(
+				L"BluePixelShader.hlsl",
+				nullptr,
+				D3D_COMPILE_STANDARD_FILE_INCLUDE,
+				"BasicPS",
+				"ps_5_0",
+				D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+				0, &_psBlob1, &errorBlob);
+			if (FAILED(result)) {// コンパイルエラーの場合
+				if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+					::OutputDebugStringA("シェーダーファイルが見当たりません");
+				}
+				else {
+					std::string errstr;
+					errstr.resize(errorBlob->GetBufferSize());
+					std::copy_n((char*)errorBlob->GetBufferPointer(), errorBlob->GetBufferSize(), errstr.begin());
+					errstr += "\n";
+					OutputDebugStringA(errstr.c_str());
+				}
+				exit(1);
+			}
+		}
 	}
-	else {
+	else {	// 頂点シェーダーのコンパイル失敗
 		if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
 			::OutputDebugStringA("シェーダーファイルが見当たりません");
 		}
@@ -462,8 +489,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	gpipeline.pRootSignature = nullptr;
 	gpipeline.VS.pShaderBytecode = _vsBlob->GetBufferPointer();
 	gpipeline.VS.BytecodeLength = _vsBlob->GetBufferSize();
-	gpipeline.PS.pShaderBytecode = _psBlob->GetBufferPointer();
-	gpipeline.PS.BytecodeLength = _psBlob->GetBufferSize();
+	gpipeline.PS.pShaderBytecode = _psBlob0->GetBufferPointer();
+	gpipeline.PS.BytecodeLength = _psBlob0->GetBufferSize();
 	// gpipeline.StreamOutput.NumEntriesについては未指定
 
 //  デフォルトのサンプルマスクを表す定数（0xffffffff）
@@ -544,9 +571,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	rootSigBlob->Release(); // 不要になったので解放
 	gpipeline.pRootSignature = rootsignature;
-
-	ID3D12PipelineState* _pipelinestate = nullptr;
-	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate));
+	// パイプライン0の生成
+	ID3D12PipelineState* _pipelinestate0 = nullptr;
+	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate0));
+	if (result != S_OK) {
+		DebugOutputFormatString("FAILED ID3D12Device::CreateGraphicsPipelineState method");
+		return -1;
+	}
+	// パイプライン1の生成
+	ID3D12PipelineState* _pipelinestate1 = nullptr;
+	gpipeline.PS.pShaderBytecode = _psBlob1->GetBufferPointer();
+	gpipeline.PS.BytecodeLength = _psBlob1->GetBufferSize();
+	result = _dev->CreateGraphicsPipelineState(&gpipeline, IID_PPV_ARGS(&_pipelinestate1));
 	if (result != S_OK) {
 		DebugOutputFormatString("FAILED ID3D12Device::CreateGraphicsPipelineState method");
 		return -1;
@@ -598,7 +634,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
 
 		//　パイプラインの設定
-		_cmdList->SetPipelineState(_pipelinestate);
+		_cmdList->SetPipelineState(_pipelinestate0);
 
 		// レンダーターゲットの設定
 		auto rtvH = rtvHeaps->GetCPUDescriptorHandleForHeapStart();
@@ -618,14 +654,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		_cmdList->SetGraphicsRootSignature(rootsignature);
 		// トポロジ
 		_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+
+		//頂点情報をコピー
+		for (int i = 0; i < _countof(vertices); i++) {
+			//X = x * cos(r) - y * sin(r)
+			//Y = x * sin(r) + y * cos(r)
+			//vertices2[i].x = vertices[i].x * cos(frame / 64.0f) - vertices[i].y * sin(frame / 64.0f) ;
+			//vertices2[i].y = vertices[i].x * sin(frame / 64.0f) + vertices[i].y * cos(frame / 64.0f) ;
+			vertices2[i].x = vertices[i].x;
+			vertices2[i].y = vertices[i].y;
+		}
+		XMFLOAT3* vertMap = nullptr;
+		result = vertBuff->Map(0, nullptr, (void**)&vertMap);
+		std::copy(std::begin(vertices), std::end(vertices), vertMap);
+		vertBuff->Unmap(0, nullptr);
+
 		// 頂点
 		_cmdList->IASetVertexBuffers(0, 1, &vbView);
 		// 頂点インデックス
 		_cmdList->IASetIndexBuffer(&ibView);
-		//　頂点を描画
-		_cmdList->DrawIndexedInstanced(sizeof(indices) / sizeof(indices[0]), 1, 0, 0, 0);
-		//_cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		//　前半の頂点を描画
+		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, 0, 0, 0);
+		// パイプラインを切り替えて後半を描く
+		_cmdList->SetPipelineState(_pipelinestate1);
+		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, indicesSize / 2, 0, 0);
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
