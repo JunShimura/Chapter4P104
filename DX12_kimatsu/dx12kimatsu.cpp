@@ -262,7 +262,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	for (int i = 0; i < nPolygons; i++) {
 		for (int j = 0; j < nVertices; j++) {
-			vertices[i * nVertices + j].x = (polygonCenter[i].x - polygonRadius[i] * sin((double)j / nVertices * 2 * M_PI)) * screenRatio;	//＝ｘcosθ-ｙsinθ
+			vertices[i * nVertices + j].x = (polygonCenter[i].x - polygonRadius[i] * sin((double)j / nVertices * 2 * M_PI));	//＝ｘcosθ-ｙsinθ
 			vertices[i * nVertices + j].y = polygonCenter[i].y + polygonRadius[i] * cos((double)j / nVertices * 2 * M_PI);	//＝ｘsinθ+ｙcosθ
 			vertices[i * nVertices + j].z = 0;
 		}
@@ -383,12 +383,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		return -1;
 	}
 	//作ったバッファにインデックスデータをコピー
-	/*
 	unsigned short* mappedIdx = nullptr;
 	idxBuff->Map(0, nullptr, (void**)&mappedIdx);
 	std::copy(std::begin(indices), std::end(indices), mappedIdx);
 	idxBuff->Unmap(0, nullptr);
-	*/
+
 
 	//インデックスバッファビューを作成
 	D3D12_INDEX_BUFFER_VIEW ibView = {};
@@ -657,17 +656,20 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 		//頂点情報をコピー
+
 		for (int i = 0; i < _countof(vertices); i++) {
 			//X = x * cos(r) - y * sin(r)
 			//Y = x * sin(r) + y * cos(r)
-			//vertices2[i].x = vertices[i].x * cos(frame / 64.0f) - vertices[i].y * sin(frame / 64.0f) ;
-			//vertices2[i].y = vertices[i].x * sin(frame / 64.0f) + vertices[i].y * cos(frame / 64.0f) ;
-			vertices2[i].x = vertices[i].x;
-			vertices2[i].y = vertices[i].y;
+			vertices2[i].x = (vertices[i].x * cos(frame / 64.0f) - vertices[i].y * sin(frame / 64.0f)) * screenRatio;
+			vertices2[i].y = vertices[i].x * sin(frame / 64.0f) + vertices[i].y * cos(frame / 64.0f);
+			// vertices2[i].x = vertices[i].x;
+			// vertices2[i].y = vertices[i].y;
+			vertices2[i].z = vertices[i].z;
+
 		}
 		XMFLOAT3* vertMap = nullptr;
 		result = vertBuff->Map(0, nullptr, (void**)&vertMap);
-		std::copy(std::begin(vertices), std::end(vertices), vertMap);
+		std::copy(std::begin(vertices2), std::end(vertices2), vertMap);
 		vertBuff->Unmap(0, nullptr);
 
 		// 頂点
