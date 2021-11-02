@@ -262,7 +262,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	for (int i = 0; i < nPolygons; i++) {
 		for (int j = 0; j < nVertices; j++) {
-			vertices[i * nVertices + j].x = (polygonCenter[i].x - polygonRadius[i] * sin((double)j / nVertices * 2 * M_PI));	//＝ｘcosθ-ｙsinθ
+			vertices[i * nVertices + j].x = (polygonCenter[i].x - polygonRadius[i] * sin((double)j / nVertices * 2 * M_PI)) ;	//＝ｘcosθ-ｙsinθ
 			vertices[i * nVertices + j].y = polygonCenter[i].y + polygonRadius[i] * cos((double)j / nVertices * 2 * M_PI);	//＝ｘsinθ+ｙcosθ
 			vertices[i * nVertices + j].z = 0;
 		}
@@ -656,7 +656,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 
 		//頂点情報をコピー
-
 		for (int i = 0; i < _countof(vertices); i++) {
 			//X = x * cos(r) - y * sin(r)
 			//Y = x * sin(r) + y * cos(r)
@@ -665,8 +664,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// vertices2[i].x = vertices[i].x;
 			// vertices2[i].y = vertices[i].y;
 			vertices2[i].z = vertices[i].z;
-
 		}
+		// 頂点バッファをGPUへ転送
 		XMFLOAT3* vertMap = nullptr;
 		result = vertBuff->Map(0, nullptr, (void**)&vertMap);
 		std::copy(std::begin(vertices2), std::end(vertices2), vertMap);
@@ -677,11 +676,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 頂点インデックス
 		_cmdList->IASetIndexBuffer(&ibView);
 		//　前半の頂点を描画
-		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, 0, 0, 0);
-		// _cmdList->DrawIndexedInstanced(9, 1, frame%(indicesSize / 2), 0, 0);
+		//_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, 0, 0, 0);
+		_cmdList->DrawIndexedInstanced(indicesSize, 1, 0, 0, 0);	//全部描く
+
+		//_cmdList->DrawIndexedInstanced(9, 1, frame%(indicesSize / 2), 0, 0);
 		// パイプラインを切り替えて後半を描く
-		_cmdList->SetPipelineState(_pipelinestate1);
-		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, indicesSize / 2, 0, 0);
+		_cmdList->SetPipelineState(_pipelinestate1);	//パイプラインを切り替え
+		_cmdList->DrawIndexedInstanced(42, 1, (frame * 3) % indicesSize, 0, 0);	//一部を塗る
+
 		BarrierDesc.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		BarrierDesc.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 		_cmdList->ResourceBarrier(1, &BarrierDesc);
