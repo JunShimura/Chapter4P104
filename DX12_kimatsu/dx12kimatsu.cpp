@@ -677,8 +677,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		// 頂点インデックス
 		_cmdList->IASetIndexBuffer(&ibView);
 		//　前半の頂点を描画
-		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, 0, 0, 0);
-		// _cmdList->DrawIndexedInstanced(9, 1, frame%(indicesSize / 2), 0, 0);
+		//_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, 0, 0, 0);
+		 _cmdList->DrawIndexedInstanced(9, 1, frame%(indicesSize / 2), 0, 0);
 		// パイプラインを切り替えて後半を描く
 		_cmdList->SetPipelineState(_pipelinestate1);
 		_cmdList->DrawIndexedInstanced(indicesSize / 2, 1, indicesSize / 2, 0, 0);
